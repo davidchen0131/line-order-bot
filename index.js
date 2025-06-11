@@ -4,7 +4,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('⛔️ UNHANDLED REJECTION:', reason);
 });
 
-import 'dotenv/config';
+import './utils/loadEnv.js';
 import express from 'express';
 import path from 'path';
 // 如果你用 ESM，需要這兩行來取得 __dirname：
