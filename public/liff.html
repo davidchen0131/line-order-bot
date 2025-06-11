@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>訂單表單</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    label { display: block; margin-top: 12px; }
+    input, button { width: 100%; padding: 8px; font-size: 16px; }
+    button { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h2>📋 填寫訂單資訊</h2>
+  <form id="orderForm">
+    <label>姓名
+      <input name="name" type="text" required />
+    </label>
+    <label>電話
+      <input name="phone" type="tel" pattern="09[0-9]{8}" required />
+    </label>
+    <label>地址
+      <input name="address" type="text" required />
+    </label>
+    <button type="submit">送出訂單</button>
+  </form>
+
+  <script>
+    const liffId = '1580306632-9lkpdrwb'; // 你的 Tall LIFF ID
+    window.addEventListener('load', () => {
+      liff.init({ liffId })
+        .then(() => {
+          const form = document.getElementById('orderForm');
+          form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(form));
+            // 傳送一個特殊前綴，讓 Bot 端識別這是 LIFF 表單
+            await liff.sendMessages([{
+              type: 'text',
+              text: `__LIFF_ORDER__${JSON.stringify(data)}`
+            }]);
+            liff.closeWindow();
+          });
+        })
+        .catch(err => {
+          console.error('LIFF init error', err);
+          alert('初始化失敗，請稍後重試');
+        });
+    });
+  </script>
+</body>
+</html>

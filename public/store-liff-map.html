@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>選擇超商門市</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+    #confirm {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #06c755;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <button id="confirm">✅ 確認這間門市</button>
+  <script>
+    let selectedStore = null;
+    let stores = [
+      {
+        name: '全家福科店',
+        id: 'F123456',
+        address: '台中市西屯區福科路123號',
+        position: { lat: 24.1757, lng: 120.6106 }
+      },
+      {
+        name: '7-11中科門市',
+        id: '7117890',
+        address: '台中市西屯區中科路456號',
+        position: { lat: 24.1733, lng: 120.6091 }
+      }
+    ];
+
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lng2-lng1) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function initMap() {
+      const defaultCenter = { lat: 24.1757, lng: 120.6106 };
+      const map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: defaultCenter
+      });
+
+      // 使用者定位
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const userPos = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          };
+          new google.maps.Marker({
+            position: userPos,
+            map,
+            title: '你的位置',
+            icon: {
+              url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            }
+          });
+          map.setCenter(userPos);
+
+          // 計算每家門市距離
+          stores.forEach(s => {
+            s.distance = getDistance(userPos.lat, userPos.lng, s.position.lat, s.position.lng);
+          });
+
+          // 依距離排序門市
+          stores.sort((a, b) => a.distance - b.distance);
+
+          addStoreMarkers(map);
+        }, err => {
+          console.warn('定位失敗', err);
+          addStoreMarkers(map);
+        });
+      } else {
+        addStoreMarkers(map);
+      }
+    }
+
+    function addStoreMarkers(map) {
+      stores.forEach(store => {
+        const marker = new google.maps.Marker({
+          position: store.position,
+          map,
+          title: store.name + (store.distance ? `（${Math.round(store.distance)} 公尺）` : '')
+        });
+
+        marker.addListener('click', () => {
+          selectedStore = store;
+          const btn = document.getElementById('confirm');
+          btn.textContent = `✅ 使用 ${store.name}`;
+          btn.style.display = 'block';
+        });
+      });
+    }
+
+    document.getElementById('confirm').onclick = async () => {
+      if (!selectedStore) return;
+
+      try {
+        await liff.init({ liffId: '1580306632-k8K1qPyV' });
+      } catch (err) {
+        alert('LIFF 初始化失敗：' + err.message);
+        return;
+      }
+
+      if (!liff.isInClient()) {
+        alert('請在 LINE App 中開啟此頁面');
+        return;
+      }
+
+      liff.sendMessages([
+        {
+          type: 'text',
+          text: `__STORE_SELECTED__|${selectedStore.name}|${selectedStore.id}|${selectedStore.address}`
+        }
+      ]).then(() => liff.closeWindow())
+        .catch(err => alert('傳送訊息失敗：' + err.message));
+    };
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDv9IuxQ_VqP5Qlg0_2YfVzNGTjQWuF0zk&callback=initMap"></script>
+</body>
+</html>
